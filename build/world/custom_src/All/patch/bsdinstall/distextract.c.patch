@@ -1,0 +1,11 @@
+--- /usr/src/usr.sbin/bsdinstall/distextract/distextract.c	2014-09-10 16:12:57.523124803 +0200
++++ /usr/src/usr.sbin/bsdinstall/distextract/distextract.c.orig	2014-09-10 16:13:41.186743423 +0200
+@@ -64,7 +64,7 @@
+ 		dists[i] = strsep(&diststring, " \t");
+ 
+ 	init_dialog(stdin, stdout);
+-	dialog_vars.backtitle = __DECONST(char *, "FreeBSD Installer");
++	dialog_vars.backtitle = __DECONST(char *, "@@PROJECT_NAME Installer");
+ 	dlg_put_backtitle();
+ 
+ 	if (chdir(getenv("BSDINSTALL_CHROOT")) != 0) {

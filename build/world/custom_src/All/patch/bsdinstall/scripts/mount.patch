@@ -1,0 +1,11 @@
+--- /usr/src/usr.sbin/bsdinstall/scripts/mount	2014-09-15 11:15:43.128792833 +0200
++++ /usr/src/usr.sbin/bsdinstall/scripts/mount.orig	2014-09-15 11:16:01.102630273 +0200
+@@ -44,7 +44,7 @@
+ 	mkdir -p $i 2>/dev/null
+ 	MNTERROR=`mount -F $TMP_FSTAB $i 2>&1`
+ 	if [ $? -ne 0 ]; then
+-		dialog --backtitle "FreeBSD Installer" --title "Error" \
++		dialog --backtitle "@@PROJECT_NAME Installer" --title "Error" \
+ 		    --msgbox "Error mounting partition $i:\n$MNTERROR" 0 0
+ 		exit 1
+ 	fi

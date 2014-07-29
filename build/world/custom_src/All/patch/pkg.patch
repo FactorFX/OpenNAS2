@@ -1,0 +1,9 @@
+--- /usr/src/etc/pkg/FreeBSD.conf	2014-09-09 14:07:11.140096191 +0200
++++ /usr/src/etc/pkg/FreeBSD.conf.orig	2014-09-09 14:07:18.485101281 +0200
+@@ -4,5 +4,5 @@
+   mirror_type: "srv",
+   signature_type: "fingerprints",
+   fingerprints: "/usr/share/keys/pkg",
+-  enabled: yes
++  enabled: no
+ }

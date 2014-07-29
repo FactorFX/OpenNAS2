@@ -1,0 +1,146 @@
+#!/bin/sh
+#-
+# Copyright (c) 2013 Nathan Whitehorn
+# Copyright (c) 2013 Devin Teske
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+#
+# $FreeBSD: releng/10.0/usr.sbin/bsdinstall/scripts/script 258421 2013-11-21 03:40:52Z dteske $
+#
+############################################################ INCLUDES
+
+BSDCFG_SHARE="/usr/share/bsdconfig"
+. $BSDCFG_SHARE/common.subr || exit 1
+f_dprintf "%s: loading includes..." "$0"
+f_include $BSDCFG_SHARE/dialog.subr
+f_include $BSDCFG_SHARE/variable.subr
+
+############################################################ CONFIGURATION
+
+# VARIABLES:
+# PARTITIONS
+# DISTRIBUTIONS
+# BSDINSTALL_DISTDIR
+
+############################################################ GLOBALS
+
+#
+# Strings that should be moved to an i18n file and loaded with f_include_lang()
+#
+msg_installation_error="Installation Error!"
+
+############################################################ FUNCTIONS
+
+error() {	
+	test -f $PATH_FSTAB && bsdinstall umount
+	dialog --backtitle "$PROJECT_NAME Installer" --title "Abort" \
+	    --no-label "Exit" --yes-label "Restart" --yesno \
+	    "An installation step has been aborted. Would you like to restart the installation or exit the installer?" 0 0
+	if [ $? -ne 0 ]; then
+		exit 1
+	else
+		if [ "x$ZFSBOOT_POOL_NAME" != "x" ] && [ -n "$(zpool list | grep ^$ZFSBOOT_POOL_NAME)" ]; then
+			zpool destroy $ZFSBOOT_POOL_NAME
+		fi
+		sh /etc/rc.local
+	fi
+
+	exit 1
+}
+
+############################################################ MAIN
+
+set -e
+
+SCRIPT="$1"
+shift
+TYPE_INSTALL="$1"
+shift
+
+f_dprintf "Began Instalation at %s" "$( date )"
+rm -rf $BSDINSTALL_TMPETC
+mkdir $BSDINSTALL_TMPETC
+
+split -a 2 -p '^#!.*' "$SCRIPT" /tmp/bsdinstall-installscript-
+
+. /tmp/bsdinstall-installscript-aa
+: ${DISTRIBUTIONS="kernel.txz base.txz"}; export DISTRIBUTIONS
+export BSDINSTALL_DISTDIR
+
+# Make partitions
+rm -f $PATH_FSTAB
+touch $PATH_FSTAB
+
+bsdinstall keymap
+
+echo "hostname=\"${PROJECT_NAME}.localhost\"" > $BSDINSTALL_TMPETC/rc.conf.hostname
+
+bsdinstall zfsboot || error
+bsdinstall mount || error
+# Unpack distributions
+bsdinstall checksum || error
+bsdinstall distextract || error
+
+# Run post-install script
+if [ -f /tmp/bsdinstall-installscript-ab ]; then
+	cp -R /packages $BSDINSTALL_CHROOT/
+	cp /etc/pkg/install.conf $BSDINSTALL_CHROOT/etc/pkg
+	cp /tmp/bsdinstall-installscript-ab $BSDINSTALL_CHROOT/tmp/installscript
+	chmod a+x $BSDINSTALL_CHROOT/tmp/installscript
+	mount -t devfs devfs "$BSDINSTALL_CHROOT/dev"
+	chroot $BSDINSTALL_CHROOT /tmp/installscript $@ >> ${debugFile#+} 2>/dev/null
+	umount "$BSDINSTALL_CHROOT/dev"
+	rm $BSDINSTALL_CHROOT/tmp/installscript
+	rm -rf $BSDINSTALL_CHROOT/packages/
+	rm -f $BSDINSTALL_CHROOT/etc/pkg/install.conf
+fi
+
+bsdinstall time || error
+
+# Make sure networking is functional, if we can arrange that
+if [ ! -f $BSDINSTALL_CHROOT/etc/resolv.conf -a -f /etc/resolv.conf ]; then
+	cp /etc/resolv.conf $BSDINSTALL_CHROOT/etc/resolv.conf
+fi
+
+trap true SIGINT	# This section is optional
+if [ "$NETCONFIG_DONE" != yes ]; then
+	bsdinstall netconfig	# Don't check for errors -- the user may cancel
+fi
+
+# Add rc for project
+cp /usr/local/$PROJECT_NAME/rc.conf $BSDINSTALL_TMPETC/rc.conf.${PROJECT_NAME}
+
+# Finalize install
+bsdinstall config || error
+
+# Add default password to root = $PROJECT_NAME in lower case
+chroot $BSDINSTALL_CHROOT sh -c 'echo "$PROJECT_NAME" | tr "[:upper:]" "[:lower:]" | pw usermod root -h 0'
+
+bsdinstall entropy
+bsdinstall umount
+
+f_dprintf "Installation Completed at %s" "$( date )"
+
+################################################################################
+# END
+################################################################################

@@ -1,0 +1,9 @@
+--- /usr/src/usr.sbin/bsdinstall/Makefile	2014-09-15 10:41:18.473460565 +0200
++++ /usr/src/usr.sbin/bsdinstall/Makefile.orig	2014-09-15 10:48:52.520542112 +0200
+@@ -1,6 +1,6 @@
+ # $FreeBSD: releng/10.0/usr.sbin/bsdinstall/Makefile 222998 2011-06-11 21:44:07Z nwhitehorn $
+ 
+-SUBDIR= distextract distfetch partedit scripts
++SUBDIR= distextract scripts
+ SCRIPTS= bsdinstall
+ MAN= bsdinstall.8

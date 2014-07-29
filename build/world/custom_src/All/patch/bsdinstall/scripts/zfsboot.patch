@@ -1,0 +1,82 @@
+--- /usr/src/usr.sbin/bsdinstall/scripts/zfsboot	2014-09-15 15:15:43.128792833 +0200
++++ /usr/src/usr.sbin/bsdinstall/scripts/zfsboot.orig	2014-09-17 15:31:46.357137707 +0200
+@@ -213,7 +213,7 @@
+ msg_error="Error"
+ msg_force_4k_sectors="Force 4K Sectors?"
+ msg_force_4k_sectors_help="Use gnop(8) to configure forced 4K sector alignment"
+-msg_freebsd_installer="FreeBSD Installer"
++msg_freebsd_installer="@@PROJECT_NAME Installer"
+ msg_geli_password="Enter a strong passphrase, used to protect your encryption keys. You will be required to enter this passphrase each time the system is booted"
+ msg_geli_setup="Initializing encryption on selected disks,\n this will take several seconds per disk"
+ msg_install="Install"
+@@ -264,12 +264,12 @@
+ msg_stripe_help="[1+ Disks] Striping provides maximum storage but no redundancy"
+ msg_swap_size="Swap Size"
+ msg_swap_size_help="Customize how much swap space is allocated to each selected disk"
+-msg_these_disks_are_too_small="These disks are too small given the amount of requested\nswap (%s) and/or geli(8) (%s) partitions, which would\ntake 50%% or more of each of the following selected disk\ndevices (not recommended):\n\n  %s\n\nRecommend changing partition size(s) and/or selecting a\ndifferent set of devices."
++msg_these_disks_are_too_small="This disk are too small (required %s minimum):\n\n  %s\n\nRecommend selecting a different device."
+ msg_unable_to_get_disk_capacity="Unable to get disk capacity of \`%s'"
+ msg_unsupported_partition_scheme="%s is an unsupported partition scheme"
+ msg_user_cancelled="User Cancelled."
+ msg_yes="YES"
+-msg_zfs_configuration="ZFS Configuration"
++msg_zfs_configuration="@@PROJECT_NAME Installation"
+ 
+ ############################################################ FUNCTIONS
+ 
+@@ -342,6 +342,20 @@
+ 	return $retval
+ }
+ 
++dialog_menu_disk()
++{
++	local dev retval
++	
++	dev=$( f_device_menu \
++			"$TYPE_INSTALL" "Please select a disk" "$hline" $DEVICE_TYPE_DISK \
++			2>&1 >&$DIALOG_TERMINAL_PASSTHRU_FD )
++	retval=$?
++	[ "$dev" ] || return $FAILURE
++	[ $retval -eq $SUCCESS ] || return $FAILURE
++	
++	echo $dev
++}
++
+ # dialog_last_chance $disks ...
+ #
+ # Display a list of the disks that the user is about to destroy. The default
+@@ -1271,6 +1285,7 @@
+ #
+ while :; do
+ 	if ! f_interactive; then
++		ZFSBOOT_DISKS=$(dialog_menu_disk)
+ 		retval=$DIALOG_OK
+ 		mtag=">>> $msg_install"
+ 	else
+@@ -1320,10 +1335,12 @@
+ 				          "minsize=[$minsize]"
+ 				f_dprintf "These disks are too small: %s" \
+ 				          "$teeny_disks"
++				nonInteractive=
++				total_size_go=$(( ($swapsize + $bootsize) / 1073741824 ))
+ 				f_show_err "$msg_these_disks_are_too_small" \
+-				           "$ZFSBOOT_SWAP_SIZE" \
+-				           "$ZFSBOOT_BOOT_POOL_SIZE" \
+-				           "$teeny_disks"
++						   "$total_size_go Go" \
++				           "$teeny_disks" 				           
++				nonInteractive=yes
+ 				continue
+ 			fi
+ 		fi
+@@ -1331,9 +1348,7 @@
+ 		#
+ 		# Last Chance!
+ 		#
+-		if f_interactive; then
+-			dialog_last_chance $ZFSBOOT_DISKS || continue
+-		fi
++		dialog_last_chance $ZFSBOOT_DISKS || continue
+ 
+ 		#
+ 		# Let's do this

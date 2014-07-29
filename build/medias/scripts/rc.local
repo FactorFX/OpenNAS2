@@ -1,0 +1,94 @@
+#!/bin/sh
+# $FreeBSD: releng/10.0/release/rc.local 245742 2013-01-21 14:06:33Z nwhitehorn $
+
+: ${DIALOG_OK=0}
+: ${DIALOG_CANCEL=1}
+: ${DIALOG_HELP=2}
+: ${DIALOG_EXTRA=3}
+: ${DIALOG_ITEM_HELP=4}
+: ${DIALOG_ESC=255}
+: ${DIALOG_INSTALL="Install"}
+: ${DIALOG_UPDATE="Update"}
+: ${DIALOG_REBOOT="Reboot"}
+
+MACHINE=`uname -m`
+
+kbdcontrol -d >/dev/null 2>&1
+if [ $? -eq 0 ]; then
+	# Syscons: use xterm, start interesting things on other VTYs
+	if [ ${MACHINE} = "pc98" ]; then
+		TERM=cons25w
+	else
+		TERM=xterm
+	fi
+
+	if [ -z "$EXTERNAL_VTY_STARTED" ]; then
+		# Init will clean these processes up if/when the system
+		# goes multiuser
+		touch /tmp/bsdinstall_log
+		tail -f /tmp/bsdinstall_log > /dev/ttyv2 &
+		/usr/libexec/getty autologin ttyv3 &
+		EXTERNAL_VTY_STARTED=1
+	fi
+else
+	# Serial or other console
+	echo
+	echo "Welcome to @@PROJECT_NAME!"
+	echo
+	echo "Please choose the appropriate terminal type for your system."
+	echo "Common console types are:"
+	echo "   ansi     Standard ANSI terminal"
+	echo "   vt100    VT100 or compatible terminal"
+	echo "   xterm    xterm terminal emulator (or compatible)"
+	echo "   cons25w  cons25w terminal"
+	echo
+	echo -n "Console type [vt100]: "
+	read TERM
+	TERM=${TERM:-vt100}
+fi
+export TERM
+
+exec 3>&1
+CHOICE=$(dialog --title "Welcome to @@PROJECT_NAME Installer" \
+	--no-cancel \
+	--menu "Would you like to :" 20 51 4 \
+		"Install" "Install @@PROJECT_NAME" \
+		"Update" "Update @@PROJECT_NAME" \
+		"Reboot" "" \
+		2>&1 1>&3)
+exec 3>&-
+
+export PROJECT_NAME="@@PROJECT_NAME"
+
+case $CHOICE in
+$DIALOG_INSTALL)	# Install
+	# If not netbooting, have the installer configure the network
+	dlv=`/sbin/sysctl -n vfs.nfs.diskless_valid 2> /dev/null`
+	if [ ${dlv:=0} -eq 0 -a ! -f /etc/diskless ]; then
+		BSDINSTALL_CONFIGCURRENT=yes; export BSDINSTALL_CONFIGCURRENT
+	fi
+
+	trap true SIGINT	# Ignore cntrl-C here
+	if [ -f /etc/installerconfig ]; then
+		bsdinstall script /etc/installerconfig "Installation of @@PROJECT_NAME"
+		if [ $? -eq 0 ]; then
+			dialog --backtitle "@@PROJECT_NAME Installer" --title "Complete" --ok-label "Reboot" --msgbox "Installation of @@PROJECT_NAME complete! Would you like to reboot into the installed system now?" 0 0 && reboot
+		else
+			dialog --backtitle "@@PROJECT_NAME Installer" --title "Error" --textbox /tmp/bsdinstall_log 0 0
+			. /etc/rc.local
+		fi
+	fi
+	;;
+$DIALOG_UPDATE)	# Live CD
+	exit 0
+	;;
+$DIALOG_ESC)	# Shell
+	clear
+	echo "When finished, type 'exit' to return to the installer."
+	/bin/sh
+	. /etc/rc.local
+	;;
+$DIALOG_REBOOT) # Reboot
+	reboot
+	;;
+esac

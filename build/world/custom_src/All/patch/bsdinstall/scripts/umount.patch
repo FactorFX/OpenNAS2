@@ -1,0 +1,10 @@
+--- /usr/src/usr.sbin/bsdinstall/scripts/umount	2014-09-15 10:15:43.128792833 +0200
++++ /usr/src/usr.sbin/bsdinstall/scripts/umount.orig	2014-09-17 10:31:46.357137707 +0200
+@@ -39,4 +39,6 @@
+ }' > $TMP_FSTAB
+ 
+ umount $BSDINSTALL_CHROOT/dev 2>/dev/null
+-umount -F $TMP_FSTAB -a 2>/dev/null
++if test -s $TMP_FSTAB; then
++	umount -F $TMP_FSTAB -a 2>/dev/null
++fi

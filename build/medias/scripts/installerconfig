@@ -1,0 +1,12 @@
+#!/bin/sh
+
+export zfsInteractive=
+export nonInteractive=true
+export ZFSBOOT_CONFIRM_LAYOUT=true
+export ZFSBOOT_POOL_NAME="zroot"
+export TYPE_INSTALL
+export DIALOG_BACKTITLE="$msg_freebsd_installer"
+
+#!/bin/sh
+
+env ASSUME_ALWAYS_YES=yes pkg install opennas

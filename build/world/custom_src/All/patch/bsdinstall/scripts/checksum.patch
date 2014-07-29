@@ -1,0 +1,20 @@
+--- /usr/src/usr.sbin/bsdinstall/scripts/checksum	2014-09-15 11:10:11.364301955 +0200
++++ /usr/src/usr.sbin/bsdinstall/scripts/checksum.orig	2014-09-15 11:11:08.233385804 +0200
+@@ -37,7 +37,7 @@
+ 	for i in $DISTRIBUTIONS; do
+ 		items="$items $i `eval echo \\\${status_$(basename $i .txz):-Pending}`"
+ 	done
+-	dialog --backtitle "FreeBSD Installer" --title "Checksum Verification" \
++	dialog --backtitle "@@PROJECT_NAME Installer" --title "Checksum Verification" \
+ 	    --mixedgauge "Verifying checksums of selected distributions." \
+ 	    0 0 $percentage $items
+ 
+@@ -62,7 +62,7 @@
+ 		percentage=$(echo $percentage + 100/`echo $DISTRIBUTIONS | wc -w` | bc)
+ 	else
+ 		eval "status_$distname=1"
+-		dialog --backtitle "FreeBSD Installer" --title "Error" \
++		dialog --backtitle "@@PROJECT_NAME Installer" --title "Error" \
+ 		    --msgbox "The checksum for $dist does not match. It may have become corrupted, and should be redownloaded." 0 0
+ 		exit 1
+ 	fi

@@ -1,0 +1,11 @@
+--- /usr/src/sys/boot/forth/menu.4th	2014-09-03 15:16:20.838253975 +0200
++++ /usr/src/sys/boot/forth/menu.4th.orig	2014-09-03 16:37:54.666469866 +0200
+@@ -445,7 +445,7 @@
+ 
+ 	\ Print the frame caption at (x,y)
+ 	str_loader_menu_title getenv dup -1 = if
+-		drop s" Welcome to FreeBSD"
++		drop s" Welcome to @@PROJECT_NAME"
+ 	then
+ 	TRUE ( use default alignment )
+ 	str_loader_menu_title_align getenv dup -1 <> if
